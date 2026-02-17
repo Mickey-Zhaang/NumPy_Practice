@@ -2,7 +2,11 @@ import styled from 'styled-components';
 
 import type { HighlightRegion } from './CodeRunner.utils';
 
-function isHighlighted(i: number, j: number, highlight: HighlightRegion): boolean {
+function isHighlighted(
+	i: number,
+	j: number,
+	highlight: HighlightRegion
+): boolean {
 	if (highlight.type === 'row') return i === highlight.index;
 	if (highlight.type === 'column') return j === highlight.index;
 	const { rowStart, rowEnd, colStart, colEnd } = highlight;
@@ -15,6 +19,13 @@ type MatrixDisplayProps = {
 };
 
 export function MatrixDisplay({ matrix, highlight }: MatrixDisplayProps) {
+	if (!matrix?.length || !matrix[0]?.length) {
+		return (
+			<Card>
+				<Grid aria-label="No matrix">—</Grid>
+			</Card>
+		);
+	}
 	return (
 		<Card>
 			<Grid role="img" aria-label="Given matrix">
@@ -23,7 +34,9 @@ export function MatrixDisplay({ matrix, highlight }: MatrixDisplayProps) {
 						{row.map((cell, j) => (
 							<Cell
 								key={j}
-								$highlighted={highlight != null && isHighlighted(i, j, highlight)}>
+								$highlighted={
+									highlight != null && isHighlighted(i, j, highlight)
+								}>
 								{cell}
 							</Cell>
 						))}
@@ -36,7 +49,7 @@ export function MatrixDisplay({ matrix, highlight }: MatrixDisplayProps) {
 
 const Card = styled.div`
 	padding: 1.5rem;
-	background: #f5f5f5;
+	background: rgb(232, 232, 232);
 	border: 1px solid #eee;
 	border-radius: 12px;
 	display: inline-block;

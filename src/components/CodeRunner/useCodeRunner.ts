@@ -4,14 +4,25 @@ import { CODE_RUNNER_PREAMBLE, PYODIDE_INDEX } from './CodeRunner.constants';
 import type { Challenge } from './CodeRunner.utils';
 import { generateIntegerMatrix, pickRandomChallenge } from './CodeRunner.utils';
 
-const MIN_SIZE = 2;
-const MAX_SIZE = 6;
+const MIN_MATRIX_SIZE = 2;
+const MAX_MATRIX_SIZE = 4;
 
-function randomSize(): number {
-	return MIN_SIZE + Math.floor(Math.random() * (MAX_SIZE - MIN_SIZE + 1));
+function randomMatrixSize(): number {
+	return (
+		MIN_MATRIX_SIZE +
+		Math.floor(Math.random() * (MAX_MATRIX_SIZE - MIN_MATRIX_SIZE + 1))
+	);
 }
 
-const INITIAL_MATRIX = generateIntegerMatrix(randomSize(), randomSize(), 0, 9);
+const INITIAL_MATRIX = generateIntegerMatrix(
+	randomMatrixSize(),
+	randomMatrixSize(),
+	0,
+	9
+);
+
+export const FEEDBACK_CORRECT = 'Correct!';
+const FEEDBACK_WRONG = 'Not quite';
 
 /**
  * Normalize output for comparison: collapse whitespace, trim, and strip
@@ -30,18 +41,21 @@ function normalizeOutput(s: string): string {
  * as equal when they match (e.g. "3" vs "3.0"), and only consider the first
  * line of user output when expected is single-line (avoids stderr/buffer noise).
  */
+const NUMERIC_TOLERANCE = 1e-10;
+
 function outputsMatch(userOut: string, expected: string): boolean {
-	const b = normalizeOutput(expected);
+	const expectedNorm = normalizeOutput(expected);
 	const firstLine = userOut.split(/\r?\n/)[0] ?? '';
-	const a = normalizeOutput(firstLine);
-	const aFull = normalizeOutput(userOut);
-	if (aFull === b || a === b) return true;
-	const numA = Number(a);
-	const numB = Number(b);
-	if (Number.isFinite(numA) && Number.isFinite(numB) && Math.abs(numA - numB) < 1e-10) {
-		return true;
-	}
-	return false;
+	const userNorm = normalizeOutput(firstLine);
+	const userFullNorm = normalizeOutput(userOut);
+	if (userFullNorm === expectedNorm || userNorm === expectedNorm) return true;
+	const numUser = Number(userNorm);
+	const numExpected = Number(expectedNorm);
+	return (
+		Number.isFinite(numUser) &&
+		Number.isFinite(numExpected) &&
+		Math.abs(numUser - numExpected) < NUMERIC_TOLERANCE
+	);
 }
 
 export function useCodeRunner() {
@@ -52,14 +66,13 @@ export function useCodeRunner() {
 	const [output, setOutput] = useState('');
 	const [feedback, setFeedback] = useState('');
 	const [isRunning, setIsRunning] = useState(false);
-	const [showOutput, setShowOutput] = useState(false);
 	const runIdRef = useRef(0);
 	const roundIdRef = useRef(0);
 
 	const startNewRound = useCallback((matrixToUse?: number[][]) => {
 		const isFirstRound = matrixToUse != null;
-		const rows = isFirstRound ? matrixToUse!.length : randomSize();
-		const cols = isFirstRound ? matrixToUse![0].length : randomSize();
+		const rows = isFirstRound ? matrixToUse!.length : randomMatrixSize();
+		const cols = isFirstRound ? matrixToUse![0].length : randomMatrixSize();
 		const newMatrix = isFirstRound
 			? matrixToUse!
 			: generateIntegerMatrix(rows, cols, 0, 9);
@@ -106,23 +119,20 @@ export function useCodeRunner() {
 				if (thisRunId !== runIdRef.current) return;
 				if (error) {
 					setOutput(`Error: ${error}`);
-					setFeedback('Not quite');
+					setFeedback(FEEDBACK_WRONG);
 					return;
 				}
-				const userOut = (stdout || '').trim();
-				const expected = expectedOutput.trim();
-				setOutput(stdout || '(no output)');
-				if (outputsMatch(userOut, expected)) {
-					setFeedback('Correct!');
-					startNewRound();
-				} else {
-					setFeedback('Not quite');
-				}
+				const userOut = (stdout ?? '').trim();
+				const displayOut = stdout?.trim() ? stdout : '(no output)';
+				setOutput(displayOut);
+				const isCorrect = outputsMatch(userOut, expectedOutput.trim());
+				setFeedback(isCorrect ? FEEDBACK_CORRECT : FEEDBACK_WRONG);
+				if (isCorrect) startNewRound();
 			})
 			.catch(err => {
 				if (thisRunId !== runIdRef.current) return;
 				setOutput(`Error: ${err instanceof Error ? err.message : String(err)}`);
-				setFeedback('Not quite');
+				setFeedback(FEEDBACK_WRONG);
 			})
 			.finally(() => {
 				if (thisRunId === runIdRef.current) setIsRunning(false);
@@ -138,10 +148,8 @@ export function useCodeRunner() {
 		output,
 		isRunning,
 		runCode,
-		showOutput,
-		setShowOutput,
 		feedback,
-		isRoundReady: expectedOutput !== '',
+		isRoundReady: expectedOutput.length > 0,
 	};
 }
 
@@ -204,7 +212,7 @@ export function runChallengeExpected(
 		if (error) throw new Error(error);
 		// Pyodide can leave previous run output in the buffer; each challenge does one print(), so use only the last line.
 		const lines = stdout.trim().split(/\r?\n/).filter(Boolean);
-		return lines[lines.length - 1] ?? stdout.trim();
+		return lines.at(-1) ?? stdout.trim();
 	});
 }
 
@@ -214,9 +222,8 @@ export function runPython(
 	matrix?: number[][]
 ): Promise<{ stdout: string; error?: string }> {
 	const outLines: string[] = [];
-	const errLines: string[] = [];
 	pyodide.setStdout({ batched: (msg: string) => outLines.push(msg) });
-	pyodide.setStderr({ batched: (msg: string) => errLines.push(msg) });
+	pyodide.setStderr({ batched: () => {} });
 	let userCode = code.trim();
 	if (matrix != null && !userCode.startsWith('print(')) {
 		userCode = `__result = (${userCode})\nprint(__result)`;

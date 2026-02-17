@@ -23,15 +23,17 @@ export function CodeRunnerButton({
 }
 
 const RunButton = styled.button`
-	padding: 0.6rem 1.5rem;
-	font-size: 0.9rem;
+	padding: 0.75rem 2rem;
+	font-size: 1.05rem;
 	font-weight: 600;
 	color: #fff;
 	background: #0066cc;
 	border: none;
 	border-radius: 9999px;
 	cursor: pointer;
-	transition: background 0.2s ease, opacity 0.2s ease;
+	transition:
+		background 0.2s ease,
+		opacity 0.2s ease;
 
 	&:hover:not(:disabled) {
 		background: #0052a3;

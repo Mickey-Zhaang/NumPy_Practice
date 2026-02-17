@@ -1,29 +1,32 @@
 import styled from 'styled-components';
 
+import { forwardRef } from 'react';
+
 type CodeRunnerInputProps = {
 	code: string;
 	setCode: (value: string) => void;
-	isRunning: boolean;
+	disabled?: boolean;
 };
 
-export function CodeRunnerinput({
-	code,
-	setCode,
-	isRunning,
-}: CodeRunnerInputProps) {
+export const CodeRunnerInput = forwardRef<
+	HTMLInputElement,
+	CodeRunnerInputProps
+>(function CodeRunnerInput({ code, setCode, disabled = false }, ref) {
 	return (
 		<Input
+			ref={ref}
 			id="code-input"
 			type="text"
-			placeholder="e.g. arr[1, :] or np.mean(arr, axis=0)"
+			placeholder="e.g. arr[1, :]"
 			value={code}
 			onChange={e => setCode(e.target.value)}
 			spellCheck={false}
-			disabled={isRunning}
+			autoComplete="off"
+			disabled={disabled}
 			aria-label="Python code (one line)"
 		/>
 	);
-}
+});
 
 const Input = styled.input`
 	width: 100%;
@@ -34,7 +37,9 @@ const Input = styled.input`
 	border: 1px solid #e0e0e0;
 	border-radius: 12px;
 	background: #fff;
-	transition: border-color 0.2s ease, box-shadow 0.2s ease;
+	transition:
+		border-color 0.2s ease,
+		box-shadow 0.2s ease;
 
 	&:focus {
 		outline: 2px solid #0066cc;
