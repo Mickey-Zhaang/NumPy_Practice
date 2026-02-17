@@ -1,0 +1,235 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+import { CODE_RUNNER_PREAMBLE, PYODIDE_INDEX } from './CodeRunner.constants';
+import type { Challenge } from './CodeRunner.utils';
+import { generateIntegerMatrix, pickRandomChallenge } from './CodeRunner.utils';
+
+const MIN_SIZE = 2;
+const MAX_SIZE = 6;
+
+function randomSize(): number {
+	return MIN_SIZE + Math.floor(Math.random() * (MAX_SIZE - MIN_SIZE + 1));
+}
+
+const INITIAL_MATRIX = generateIntegerMatrix(randomSize(), randomSize(), 0, 9);
+
+/**
+ * Normalize output for comparison: collapse whitespace, trim, and strip
+ * spaces next to brackets so NumPy's "[6 4 5 9]" and "[ 6 4 5 9 ]" match.
+ */
+function normalizeOutput(s: string): string {
+	return s
+		.replace(/\s+/g, ' ')
+		.trim()
+		.replace(/\s+\]/g, ']')
+		.replace(/\[\s+/g, '[');
+}
+
+/**
+ * Compare user output to expected: normalize whitespace, treat numeric values
+ * as equal when they match (e.g. "3" vs "3.0"), and only consider the first
+ * line of user output when expected is single-line (avoids stderr/buffer noise).
+ */
+function outputsMatch(userOut: string, expected: string): boolean {
+	const b = normalizeOutput(expected);
+	const firstLine = userOut.split(/\r?\n/)[0] ?? '';
+	const a = normalizeOutput(firstLine);
+	const aFull = normalizeOutput(userOut);
+	if (aFull === b || a === b) return true;
+	const numA = Number(a);
+	const numB = Number(b);
+	if (Number.isFinite(numA) && Number.isFinite(numB) && Math.abs(numA - numB) < 1e-10) {
+		return true;
+	}
+	return false;
+}
+
+export function useCodeRunner() {
+	const [matrix, setMatrix] = useState<number[][]>(() => INITIAL_MATRIX);
+	const [challenge, setChallenge] = useState<Challenge | null>(null);
+	const [expectedOutput, setExpectedOutput] = useState('');
+	const [code, setCode] = useState('');
+	const [output, setOutput] = useState('');
+	const [feedback, setFeedback] = useState('');
+	const [isRunning, setIsRunning] = useState(false);
+	const [showOutput, setShowOutput] = useState(false);
+	const runIdRef = useRef(0);
+	const roundIdRef = useRef(0);
+
+	const startNewRound = useCallback((matrixToUse?: number[][]) => {
+		const isFirstRound = matrixToUse != null;
+		const rows = isFirstRound ? matrixToUse!.length : randomSize();
+		const cols = isFirstRound ? matrixToUse![0].length : randomSize();
+		const newMatrix = isFirstRound
+			? matrixToUse!
+			: generateIntegerMatrix(rows, cols, 0, 9);
+		const newChallenge = pickRandomChallenge(
+			newMatrix.length,
+			newMatrix[0].length
+		);
+		const thisRoundId = ++roundIdRef.current;
+		setFeedback('');
+		setOutput('');
+		setCode('');
+		setChallenge(null);
+		setExpectedOutput('');
+		if (!isFirstRound) {
+			setMatrix(newMatrix);
+		}
+		getPyodide()
+			.then(pyodide => runChallengeExpected(pyodide, newMatrix, newChallenge))
+			.then(expected => {
+				if (thisRoundId !== roundIdRef.current) return;
+				setChallenge(newChallenge);
+				setExpectedOutput(expected);
+			})
+			.catch(() => {
+				if (thisRoundId !== roundIdRef.current) return;
+				setExpectedOutput('');
+			});
+	}, []);
+
+	useEffect(() => {
+		startNewRound(INITIAL_MATRIX);
+	}, [startNewRound]);
+
+	const runCode = useCallback(() => {
+		if (!expectedOutput) return;
+		setOutput('');
+		setFeedback('');
+		setIsRunning(true);
+		const thisRunId = ++runIdRef.current;
+
+		getPyodide()
+			.then(pyodide => runPython(pyodide, code, matrix))
+			.then(({ stdout, error }) => {
+				if (thisRunId !== runIdRef.current) return;
+				if (error) {
+					setOutput(`Error: ${error}`);
+					setFeedback('Not quite');
+					return;
+				}
+				const userOut = (stdout || '').trim();
+				const expected = expectedOutput.trim();
+				setOutput(stdout || '(no output)');
+				if (outputsMatch(userOut, expected)) {
+					setFeedback('Correct!');
+					startNewRound();
+				} else {
+					setFeedback('Not quite');
+				}
+			})
+			.catch(err => {
+				if (thisRunId !== runIdRef.current) return;
+				setOutput(`Error: ${err instanceof Error ? err.message : String(err)}`);
+				setFeedback('Not quite');
+			})
+			.finally(() => {
+				if (thisRunId === runIdRef.current) setIsRunning(false);
+			});
+	}, [code, matrix, expectedOutput, startNewRound]);
+
+	return {
+		matrix,
+		challenge,
+		expectedOutput,
+		code,
+		setCode,
+		output,
+		isRunning,
+		runCode,
+		showOutput,
+		setShowOutput,
+		feedback,
+		isRoundReady: expectedOutput !== '',
+	};
+}
+
+function getPyodide(): Promise<Awaited<ReturnType<typeof loadPyodide>>> {
+	if (typeof window === 'undefined' || !window.loadPyodide) {
+		return Promise.reject(
+			new Error('Pyodide failed to load. Refresh the page.')
+		);
+	}
+	if (!getPyodide.cache) {
+		getPyodide.cache = window
+			.loadPyodide({ indexURL: PYODIDE_INDEX })
+			.then(py => py.loadPackage('numpy').then(() => py))
+			.then(py => py.runPythonAsync(CODE_RUNNER_PREAMBLE).then(() => py));
+	}
+	return getPyodide.cache;
+}
+getPyodide.cache = null as Promise<
+	Awaited<ReturnType<typeof loadPyodide>>
+> | null;
+
+// Start loading Pyodide + numpy + preamble as soon as the app loads
+if (typeof window !== 'undefined') {
+	getPyodide();
+}
+
+function buildChallengePrintCode(
+	matrix: number[][],
+	challenge: Challenge
+): string {
+	const arr = `np.array(${JSON.stringify(matrix)})`;
+	if (challenge.type === 'row') {
+		return `arr = ${arr}\nprint(arr[${challenge.index}, :])`;
+	}
+	if (challenge.type === 'column') {
+		return `arr = ${arr}\nprint(arr[:, ${challenge.index}])`;
+	}
+	const { rowStart, rowEnd, colStart, colEnd } = challenge;
+	const singleColumn = colEnd - colStart === 1;
+	const singleRow = rowEnd - rowStart === 1;
+	if (singleColumn && singleRow) {
+		return `arr = ${arr}\nprint(arr[${rowStart}, ${colStart}])`;
+	}
+	if (singleColumn) {
+		return `arr = ${arr}\nprint(arr[${rowStart}:${rowEnd}, ${colStart}])`;
+	}
+	if (singleRow) {
+		return `arr = ${arr}\nprint(arr[${rowStart}, ${colStart}:${colEnd}])`;
+	}
+	return `arr = ${arr}\nprint(arr[${rowStart}:${rowEnd}, ${colStart}:${colEnd}])`;
+}
+
+export function runChallengeExpected(
+	pyodide: Awaited<ReturnType<typeof loadPyodide>>,
+	matrix: number[][],
+	challenge: Challenge
+): Promise<string> {
+	const code = buildChallengePrintCode(matrix, challenge);
+	return runPython(pyodide, code).then(({ stdout, error }) => {
+		if (error) throw new Error(error);
+		// Pyodide can leave previous run output in the buffer; each challenge does one print(), so use only the last line.
+		const lines = stdout.trim().split(/\r?\n/).filter(Boolean);
+		return lines[lines.length - 1] ?? stdout.trim();
+	});
+}
+
+export function runPython(
+	pyodide: Awaited<ReturnType<typeof loadPyodide>>,
+	code: string,
+	matrix?: number[][]
+): Promise<{ stdout: string; error?: string }> {
+	const outLines: string[] = [];
+	const errLines: string[] = [];
+	pyodide.setStdout({ batched: (msg: string) => outLines.push(msg) });
+	pyodide.setStderr({ batched: (msg: string) => errLines.push(msg) });
+	let userCode = code.trim();
+	if (matrix != null && !userCode.startsWith('print(')) {
+		userCode = `__result = (${userCode})\nprint(__result)`;
+	}
+	const fullCode =
+		matrix != null
+			? `arr = np.array(${JSON.stringify(matrix)})\n\n${userCode}`
+			: userCode;
+	return pyodide
+		.runPythonAsync(fullCode)
+		.then(() => ({ stdout: outLines.join('\n') }))
+		.catch((err: unknown) => ({
+			stdout: outLines.join('\n'),
+			error: err instanceof Error ? err.message : String(err),
+		}));
+}
