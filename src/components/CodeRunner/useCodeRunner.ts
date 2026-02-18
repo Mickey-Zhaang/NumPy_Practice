@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { recordPlayCount } from '../../lib/playCount';
 import { CODE_RUNNER_PREAMBLE, PYODIDE_INDEX } from './CodeRunner.constants';
 import type { Challenge } from './CodeRunner.utils';
 import { generateIntegerMatrix, pickRandomChallenge } from './CodeRunner.utils';
@@ -127,7 +128,10 @@ export function useCodeRunner() {
 				setOutput(displayOut);
 				const isCorrect = outputsMatch(userOut, expectedOutput.trim());
 				setFeedback(isCorrect ? FEEDBACK_CORRECT : FEEDBACK_WRONG);
-				if (isCorrect) startNewRound();
+				if (isCorrect) {
+					recordPlayCount();
+					startNewRound();
+				}
 			})
 			.catch(err => {
 				if (thisRunId !== runIdRef.current) return;

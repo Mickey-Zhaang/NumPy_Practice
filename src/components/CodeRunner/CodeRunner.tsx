@@ -65,10 +65,10 @@ export function CodeRunner() {
 
 			{output && (
 				<Section>
-					<Label as="span">Expected</Label>
-					<Output aria-live="polite">{expectedOutput}</Output>
 					<Label as="span">Your Output</Label>
 					<Output aria-live="polite">{output}</Output>
+					<Label as="span">Expected</Label>
+					<Output aria-live="polite">{expectedOutput}</Output>
 				</Section>
 			)}
 		</Wrapper>
