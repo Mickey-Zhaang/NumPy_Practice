@@ -17,14 +17,20 @@ export type HighlightRegion = Challenge;
 export function pickRandomChallenge(rows: number, cols: number): Challenge {
 	const safeRows = Math.max(1, rows);
 	const safeCols = Math.max(1, cols);
-	const kind = Math.floor(Math.random() * 3);
+	const kind = Math.floor(Math.random() * 4);
 	if (kind === 0) {
 		return { type: 'row', index: Math.floor(Math.random() * safeRows) };
 	}
 	if (kind === 1) {
 		return { type: 'column', index: Math.floor(Math.random() * safeCols) };
 	}
-	// submatrix: ensure at least 1x1, half-open [r0, r1), [c0, c1)
+	/*
+	 * Submatrix: half-open ranges [rowStart, rowEnd) and [colStart, colEnd),
+	 * matching NumPy slicing. We pick a random:
+	 * - top-left (rowStart, colStart)
+	 * - rowEnd [rowStart+1, safeRows]
+	 * - colEnd [colStart+1, safeCols]
+	 */
 	const rowStart = Math.floor(Math.random() * safeRows);
 	const colStart = Math.floor(Math.random() * safeCols);
 	const rowEnd =
@@ -56,8 +62,9 @@ export function generateIntegerMatrix(
 	const safeRows = Math.max(0, Math.floor(rows));
 	const safeCols = Math.max(0, Math.floor(cols));
 	return Array.from({ length: safeRows }, () =>
-		Array.from({ length: safeCols }, () =>
-			Math.floor(Math.random() * (max - min + 1)) + min
+		Array.from(
+			{ length: safeCols },
+			() => Math.floor(Math.random() * (max - min + 1)) + min
 		)
 	);
 }

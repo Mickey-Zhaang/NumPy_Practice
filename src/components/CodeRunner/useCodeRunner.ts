@@ -23,7 +23,7 @@ const INITIAL_MATRIX = generateIntegerMatrix(
 );
 
 export const FEEDBACK_CORRECT = 'Correct!';
-const FEEDBACK_WRONG = 'Not quite';
+export const FEEDBACK_WRONG = 'Not quite';
 
 /**
  * Normalize output for comparison: collapse whitespace, trim, and strip
@@ -130,7 +130,7 @@ export function useCodeRunner() {
 				setFeedback(isCorrect ? FEEDBACK_CORRECT : FEEDBACK_WRONG);
 				if (isCorrect) {
 					recordPlayCount();
-					startNewRound();
+					setTimeout(() => startNewRound(), 900);
 				}
 			})
 			.catch(err => {
@@ -184,6 +184,7 @@ function buildChallengePrintCode(
 	matrix: number[][],
 	challenge: Challenge
 ): string {
+	// TS number[][] → JSON string (e.g. "[[1,2],[3,4]]") → valid Python literal; np.array() builds the ndarray in Pyodide.
 	const arr = `np.array(${JSON.stringify(matrix)})`;
 	if (challenge.type === 'row') {
 		return `arr = ${arr}\nprint(arr[${challenge.index}, :])`;
@@ -232,6 +233,7 @@ export function runPython(
 	if (matrix != null && !userCode.startsWith('print(')) {
 		userCode = `__result = (${userCode})\nprint(__result)`;
 	}
+	// TS number[][] → JSON → Python list literal; np.array() in Pyodide creates the ndarray so user code can use `arr`.
 	const fullCode =
 		matrix != null
 			? `arr = np.array(${JSON.stringify(matrix)})\n\n${userCode}`

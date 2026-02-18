@@ -1,4 +1,4 @@
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 
 import { useEffect, useRef } from 'react';
 
@@ -6,17 +6,15 @@ import { CodeRunnerButton } from './CodeRunnerButton';
 import { CodeRunnerInput } from './CodeRunnerInput';
 import { Leaderboard } from './Leaderboard';
 import { MatrixDisplay } from './MatrixDisplay';
-import { FEEDBACK_CORRECT, useCodeRunner } from './useCodeRunner';
-
-const Feedback = styled.p<{ $success: boolean }>`
-	margin: 0;
-	font-size: 1rem;
-	font-weight: 600;
-	color: ${p => (p.$success ? '#0a6b0a' : '#c00')};
-`;
+import {
+	FEEDBACK_CORRECT,
+	FEEDBACK_WRONG,
+	useCodeRunner,
+} from './useCodeRunner';
 
 export function CodeRunner() {
 	const inputRef = useRef<HTMLInputElement>(null);
+
 	const {
 		matrix,
 		challenge,
@@ -30,24 +28,29 @@ export function CodeRunner() {
 		isRoundReady,
 	} = useCodeRunner();
 
+	const showNotContainsArrWarning =
+		code.trim().length > 0 && !code.includes('a');
+
 	useEffect(() => {
 		if (isRoundReady) inputRef.current?.focus();
 	}, [isRoundReady]);
 
 	return (
 		<Wrapper>
+			{feedback === FEEDBACK_CORRECT && <CorrectPulseOverlay />}
 			<Section>
 				<MatrixCenteringWrap>
 					<MatrixDisplay matrix={matrix} highlight={challenge} />
 				</MatrixCenteringWrap>
 			</Section>
 
-			{feedback && (
-				<Feedback $success={feedback === FEEDBACK_CORRECT}>{feedback}</Feedback>
-			)}
-
-			<Section>
+			<InputSection>
 				<InputWrap>
+					{showNotContainsArrWarning && (
+						<WarningMessage>
+							Use <code>arr</code> to play
+						</WarningMessage>
+					)}
 					<CodeRunnerInput
 						ref={inputRef}
 						code={code}
@@ -62,11 +65,11 @@ export function CodeRunner() {
 						disabled={!isRoundReady}
 					/>
 				</Row>
-			</Section>
+			</InputSection>
 
 			<Leaderboard />
 
-			{output && (
+			{output && feedback === FEEDBACK_WRONG && (
 				<Section>
 					<Label as="span">Your Output</Label>
 					<Output aria-live="polite">{output}</Output>
@@ -77,6 +80,21 @@ export function CodeRunner() {
 		</Wrapper>
 	);
 }
+
+const correctPulse = keyframes`
+	0% { opacity: 0; }
+	35% { opacity: 0.5; }
+	100% { opacity: 0; }
+`;
+
+const CorrectPulseOverlay = styled.div`
+	position: fixed;
+	inset: 0;
+	background: #22c55e;
+	pointer-events: none;
+	z-index: 9999;
+	animation: ${correctPulse} 0.9s ease-out forwards;
+`;
 
 const Wrapper = styled.div`
 	max-width: 500px;
@@ -94,10 +112,28 @@ const Section = styled.div`
 	width: 100%;
 `;
 
+const InputSection = styled(Section)`
+	margin-top: 1rem;
+`;
+
 const InputWrap = styled.div`
+	position: relative;
 	max-width: 22rem;
 	width: 100%;
 	margin: 0 auto;
+`;
+
+const WarningMessage = styled.span`
+	position: absolute;
+	bottom: 100%;
+	left: 0;
+	margin-bottom: 0.25rem;
+	font-size: 0.875rem;
+	color: #b45309;
+
+	code {
+		font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+	}
 `;
 
 const MatrixCenteringWrap = styled.div`
