@@ -33,7 +33,7 @@ export function Leaderboard() {
 			<List>
 				{entries.map((entry, i) => (
 					<Row key={entry.anonymous_id}>
-						#{i + 1} {entry.total_rounds} rounds
+						#{i + 1} -- Rounds: {entry.total_rounds}
 					</Row>
 				))}
 			</List>
@@ -51,7 +51,7 @@ const Title = styled.div`
 const List = styled.div`
 	display: flex;
 	flex-direction: column;
-	gap: 0.3rem;
+	gap: 0.5rem;
 	margin-top: 0.5rem;
 `;
 
@@ -61,16 +61,26 @@ const Row = styled.div`
 	flex-direction: row;
 	gap: 0.5rem;
 	border-radius: 12px;
-	background: red;
+	background: rgba(0, 102, 204, 0.2);
 `;
 
+const BREAKPOINT = 768;
+
 const LeaderboardCard = styled.div`
-	position: fixed;
 	padding: 1.5rem;
 	background: rgb(232, 232, 232);
 	border: 1px solid #eee;
 	border-radius: 12px;
-	boarder: 1px solid black;
-	top: 4rem;
-	right: 2rem;
+	margin-top: 1.5rem;
+	width: 100%;
+	max-width: 100%;
+
+	@media (min-width: ${BREAKPOINT}px) {
+		position: fixed;
+		top: 4rem;
+		right: 2rem;
+		margin-top: 0;
+		width: auto;
+		max-width: 280px;
+	}
 `;

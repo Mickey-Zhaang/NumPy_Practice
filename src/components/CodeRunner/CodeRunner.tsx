@@ -36,7 +36,6 @@ export function CodeRunner() {
 
 	return (
 		<Wrapper>
-			<Leaderboard />
 			<Section>
 				<MatrixCenteringWrap>
 					<MatrixDisplay matrix={matrix} highlight={challenge} />
@@ -64,6 +63,8 @@ export function CodeRunner() {
 					/>
 				</Row>
 			</Section>
+
+			<Leaderboard />
 
 			{output && (
 				<Section>
