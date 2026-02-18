@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 
 import { CodeRunnerButton } from './CodeRunnerButton';
 import { CodeRunnerInput } from './CodeRunnerInput';
+import { Leaderboard } from './Leaderboard';
 import { MatrixDisplay } from './MatrixDisplay';
 import { FEEDBACK_CORRECT, useCodeRunner } from './useCodeRunner';
 
@@ -35,6 +36,7 @@ export function CodeRunner() {
 
 	return (
 		<Wrapper>
+			<Leaderboard />
 			<Section>
 				<MatrixCenteringWrap>
 					<MatrixDisplay matrix={matrix} highlight={challenge} />
