@@ -38,6 +38,7 @@ export function CodeRunner() {
 	return (
 		<Wrapper>
 			{feedback === FEEDBACK_CORRECT && <CorrectPulseOverlay />}
+			{feedback === FEEDBACK_WRONG && <WrongPulseOverlay />}
 			<Section>
 				<MatrixCenteringWrap>
 					<MatrixDisplay matrix={matrix} highlight={challenge} />
@@ -81,7 +82,7 @@ export function CodeRunner() {
 	);
 }
 
-const correctPulse = keyframes`
+const feedbackPulse = keyframes`
 	0% { opacity: 0; }
 	35% { opacity: 0.5; }
 	100% { opacity: 0; }
@@ -93,7 +94,16 @@ const CorrectPulseOverlay = styled.div`
 	background: #22c55e;
 	pointer-events: none;
 	z-index: 9999;
-	animation: ${correctPulse} 0.9s ease-out forwards;
+	animation: ${feedbackPulse} 1s ease-out forwards;
+`;
+
+const WrongPulseOverlay = styled.div`
+	position: fixed;
+	inset: 0;
+	background: rgb(189, 32, 32);
+	pointer-events: none;
+	z-index: 9999;
+	animation: ${feedbackPulse} 1s ease-out forwards;
 `;
 
 const Wrapper = styled.div`
