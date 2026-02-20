@@ -11,10 +11,6 @@ function getAnonymousId(): string {
 	return id;
 }
 
-/**
- * Records one completed round in Supabase (fire-and-forget).
- * Expects table: play_counts (anonymous_id text, total_rounds integer).
- */
 export function recordPlayCount(): void {
 	const anonymousId = getAnonymousId();
 	supabase
