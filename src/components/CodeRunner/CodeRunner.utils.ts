@@ -17,6 +17,7 @@ export type HighlightRegion = Challenge;
 export function pickRandomChallenge(rows: number, cols: number): Challenge {
 	const safeRows = Math.max(1, rows);
 	const safeCols = Math.max(1, cols);
+
 	const kind = Math.floor(Math.random() * 4);
 	if (kind === 0) {
 		return { type: 'row', index: Math.floor(Math.random() * safeRows) };

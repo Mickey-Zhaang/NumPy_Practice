@@ -2,10 +2,10 @@ import styled, { keyframes } from 'styled-components';
 
 import { useEffect, useRef } from 'react';
 
-import { CodeRunnerButton } from './CodeRunnerButton';
-import { CodeRunnerInput } from './CodeRunnerInput';
-import { Leaderboard } from './Leaderboard';
-import { MatrixDisplay } from './MatrixDisplay';
+import { CodeRunnerButton } from './CodeRunnerComponents/CodeRunnerButton';
+import { CodeRunnerInput } from './CodeRunnerComponents/CodeRunnerInput';
+import { Leaderboard } from './CodeRunnerComponents/Leaderboard';
+import { MatrixDisplay } from './CodeRunnerComponents/MatrixDisplay';
 import {
 	FEEDBACK_CORRECT,
 	FEEDBACK_WRONG,

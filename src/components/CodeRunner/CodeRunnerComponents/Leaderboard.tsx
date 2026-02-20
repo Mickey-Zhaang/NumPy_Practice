@@ -1,14 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import styled from 'styled-components';
 
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../../lib/supabase';
 
 type LeaderboardEntry = {
 	anonymous_id: string;
 	total_rounds: number;
 };
 
-// async funciton to retrieve leaderboard information
 async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
 	const { data, error } = await supabase
 		.from('play_counts')

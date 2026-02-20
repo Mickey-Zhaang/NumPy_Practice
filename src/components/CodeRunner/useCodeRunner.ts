@@ -6,7 +6,7 @@ import type { Challenge } from './CodeRunner.utils';
 import { generateIntegerMatrix, pickRandomChallenge } from './CodeRunner.utils';
 
 const MIN_MATRIX_SIZE = 2;
-const MAX_MATRIX_SIZE = 4;
+const MAX_MATRIX_SIZE = 5;
 
 function randomMatrixSize(): number {
 	return (
@@ -175,7 +175,6 @@ getPyodide.cache = null as Promise<
 	Awaited<ReturnType<typeof loadPyodide>>
 > | null;
 
-// Start loading Pyodide + numpy + preamble as soon as the app loads
 if (typeof window !== 'undefined') {
 	getPyodide();
 }
@@ -184,7 +183,6 @@ function buildChallengePrintCode(
 	matrix: number[][],
 	challenge: Challenge
 ): string {
-	// TS number[][] → JSON string (e.g. "[[1,2],[3,4]]") → valid Python literal; np.array() builds the ndarray in Pyodide.
 	const arr = `np.array(${JSON.stringify(matrix)})`;
 	if (challenge.type === 'row') {
 		return `arr = ${arr}\nprint(arr[${challenge.index}, :])`;
@@ -215,7 +213,6 @@ export function runChallengeExpected(
 	const code = buildChallengePrintCode(matrix, challenge);
 	return runPython(pyodide, code).then(({ stdout, error }) => {
 		if (error) throw new Error(error);
-		// Pyodide can leave previous run output in the buffer; each challenge does one print(), so use only the last line.
 		const lines = stdout.trim().split(/\r?\n/).filter(Boolean);
 		return lines.at(-1) ?? stdout.trim();
 	});
@@ -233,7 +230,6 @@ export function runPython(
 	if (matrix != null && !userCode.startsWith('print(')) {
 		userCode = `__result = (${userCode})\nprint(__result)`;
 	}
-	// TS number[][] → JSON → Python list literal; np.array() in Pyodide creates the ndarray so user code can use `arr`.
 	const fullCode =
 		matrix != null
 			? `arr = np.array(${JSON.stringify(matrix)})\n\n${userCode}`
