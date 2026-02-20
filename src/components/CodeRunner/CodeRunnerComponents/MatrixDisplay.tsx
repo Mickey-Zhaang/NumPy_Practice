@@ -1,6 +1,6 @@
 import styled from 'styled-components';
 
-import type { HighlightRegion } from './CodeRunner.utils';
+import type { HighlightRegion } from './../CodeRunner.utils';
 
 function isHighlighted(
 	i: number,

@@ -43,7 +43,6 @@ lerna-debug.log*
 *.swp
 *.swo
 *~
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
@@ -99,17 +98,11 @@ Desktop.ini
 # parcel-bundler cache
 .parcel-cache
 
-# Next.js (if ever used)
+# Hosting / frameworks
 .next/
 out/
-
-# Nuxt.js (if ever used)
 .nuxt/
-
-# Vercel
 .vercel
-
-# Turbo
 .turbo
 
 # Misc
